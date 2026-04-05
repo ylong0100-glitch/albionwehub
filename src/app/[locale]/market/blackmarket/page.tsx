@@ -2,12 +2,15 @@
 
 import * as React from 'react'
 import { AlertTriangle, Store } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useGameDataStore } from '@/lib/stores/game-data-store'
 import { useFlipperStore } from '@/lib/stores/flipper-store'
 import { useFlipperScan } from '@/features/blackmarket/hooks/use-flipper-scan'
+import { useEnchantFlipScan } from '@/features/blackmarket/hooks/use-enchant-flip-scan'
 import { FlipperFilters } from '@/features/blackmarket/components/flipper-filters'
 import { FlipperStats } from '@/features/blackmarket/components/flipper-stats'
 import { FlipperTable } from '@/features/blackmarket/components/flipper-table'
+import { EnchantFlipTable } from '@/features/blackmarket/components/enchant-flip-table'
 import { FlipDetailDialog } from '@/features/blackmarket/components/flip-detail-dialog'
 import { filterAndSortFlips, type FlipOpportunity } from '@/features/blackmarket/utils/flipper-calc'
 import { PageSkeleton } from '@/components/shared/loading-states'
@@ -15,9 +18,13 @@ import { PageSkeleton } from '@/components/shared/loading-states'
 export default function BlackMarketFlipper() {
   const { loaded, loading, loadGameData } = useGameDataStore()
   const filters = useFlipperStore()
-  const { opportunities, isScanning, progress, error, scan, cancel } =
-    useFlipperScan()
 
+  // Direct flip scanner
+  const directScan = useFlipperScan()
+  // Enchant-flip scanner
+  const enchantScan = useEnchantFlipScan()
+
+  const [activeTab, setActiveTab] = React.useState('direct')
   const [selectedFlip, setSelectedFlip] = React.useState<FlipOpportunity | null>(null)
   const [detailOpen, setDetailOpen] = React.useState(false)
 
@@ -26,17 +33,39 @@ export default function BlackMarketFlipper() {
     loadGameData()
   }, [loadGameData])
 
-  // Apply client-side filters to results
+  // Apply client-side filters to direct flip results
   const filteredOpportunities = React.useMemo(
-    () => filterAndSortFlips(opportunities, filters),
-    [opportunities, filters],
+    () => filterAndSortFlips(directScan.opportunities, filters),
+    [directScan.opportunities, filters],
   )
 
-  // Handle row click
+  // Handle row click for direct flips
   const handleRowClick = React.useCallback((flip: FlipOpportunity) => {
     setSelectedFlip(flip)
     setDetailOpen(true)
   }, [])
+
+  // Unified scan/cancel handlers
+  const isScanning = activeTab === 'direct' ? directScan.isScanning : enchantScan.isScanning
+  const progress = activeTab === 'direct' ? directScan.progress : enchantScan.progress
+
+  const handleScan = React.useCallback(() => {
+    if (activeTab === 'direct') {
+      directScan.scan()
+    } else {
+      enchantScan.scan()
+    }
+  }, [activeTab, directScan, enchantScan])
+
+  const handleCancel = React.useCallback(() => {
+    if (activeTab === 'direct') {
+      directScan.cancel()
+    } else {
+      enchantScan.cancel()
+    }
+  }, [activeTab, directScan, enchantScan])
+
+  const error = activeTab === 'direct' ? directScan.error : enchantScan.error
 
   // Loading state while game data loads
   if (loading && !loaded) {
@@ -79,8 +108,8 @@ export default function BlackMarketFlipper() {
 
       {/* Filters */}
       <FlipperFilters
-        onScan={scan}
-        onCancel={cancel}
+        onScan={handleScan}
+        onCancel={handleCancel}
         isScanning={isScanning}
         progress={progress}
       />
@@ -92,19 +121,52 @@ export default function BlackMarketFlipper() {
         </div>
       )}
 
-      {/* Stats row */}
-      {filteredOpportunities.length > 0 && (
-        <FlipperStats opportunities={filteredOpportunities} />
-      )}
+      {/* Tabs: Direct Flips | Enchant & Flip */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="direct">
+            Direct Flips
+            {filteredOpportunities.length > 0 && (
+              <span className="ml-1.5 text-xs opacity-70">
+                ({filteredOpportunities.length})
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="enchant">
+            Enchant & Flip
+            {enchantScan.opportunities.length > 0 && (
+              <span className="ml-1.5 text-xs opacity-70">
+                ({enchantScan.opportunities.length})
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Results table */}
-      <FlipperTable
-        opportunities={filteredOpportunities}
-        isScanning={isScanning}
-        onRowClick={handleRowClick}
-      />
+        {/* Direct Flips tab */}
+        <TabsContent value="direct" className="space-y-6 mt-4">
+          {/* Stats row */}
+          {filteredOpportunities.length > 0 && (
+            <FlipperStats opportunities={filteredOpportunities} />
+          )}
 
-      {/* Detail dialog */}
+          {/* Results table */}
+          <FlipperTable
+            opportunities={filteredOpportunities}
+            isScanning={directScan.isScanning}
+            onRowClick={handleRowClick}
+          />
+        </TabsContent>
+
+        {/* Enchant & Flip tab */}
+        <TabsContent value="enchant" className="space-y-6 mt-4">
+          <EnchantFlipTable
+            opportunities={enchantScan.opportunities}
+            isScanning={enchantScan.isScanning}
+          />
+        </TabsContent>
+      </Tabs>
+
+      {/* Detail dialog (for direct flips) */}
       <FlipDetailDialog
         flip={selectedFlip}
         open={detailOpen}

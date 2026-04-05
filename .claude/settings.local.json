@@ -29,7 +29,31 @@
       "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
       "Bash(npm install:*)",
       "Bash(npx shadcn@latest init -d --style default --base-color neutral)",
-      "Bash(npx shadcn@latest init -d)"
+      "Bash(npx shadcn@latest init -d)",
+      "Bash(npx shadcn@latest add input select dropdown-menu sheet dialog tabs card badge separator scroll-area tooltip command popover avatar skeleton switch label textarea -y)",
+      "Bash(find src/lib/api -name *.ts)",
+      "Bash(find src/lib -name *.ts -not -path */i18n/*)",
+      "Bash(find src/types -name *.ts)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(gh auth:*)",
+      "Bash(winget install:*)",
+      "Bash(export PATH=\"/c/Program Files/GitHub CLI:$PATH:/c/Program Files \\(x86\\)/GitHub CLI\")",
+      "Bash(gh --version)",
+      "Bash(export PATH=\"/c/Program Files/GitHub CLI:$PATH\")",
+      "Bash(gh repo:*)",
+      "Bash(find src/features/gold -name *.ts -o -name *.tsx)",
+      "Bash(find src/features/portfolio -name *.ts -o -name *.tsx)",
+      "Bash(ls src/lib/stores/*.ts)",
+      "Bash(npx tsc:*)",
+      "Bash(where python3:*)",
+      "Bash(where node:*)",
+      "Bash(npx tsx:*)",
+      "WebFetch(domain:albiononline.com)",
+      "WebFetch(domain:overgear.com)",
+      "WebFetch(domain:nerdlodge.com)",
+      "WebFetch(domain:albioncalculator.com)",
+      "WebFetch(domain:www.gamepressure.com)",
+      "Bash(node -e \":*)"
     ]
   }
 }

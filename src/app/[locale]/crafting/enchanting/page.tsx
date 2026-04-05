@@ -23,12 +23,17 @@ import { useEnchantPrices } from '@/features/enchanting/hooks/use-enchant-prices
 import {
   calculateEnchantCost,
   calculateEnchantProfit,
+  EQUIPMENT_TYPES,
+  EQUIPMENT_TYPE_LABELS,
+  getEnchantMaterialCount,
+  type EquipmentType,
 } from '@/features/enchanting/utils/enchanting-calc'
 
 const TIER_OPTIONS = TIERS.filter((t) => t.level >= 4 && t.level <= 8)
 
 export default function EnchantingCalculator() {
   const [tier, setTier] = useState<ItemTier>(4)
+  const [equipmentType, setEquipmentType] = useState<EquipmentType>('1h_weapon')
   const [fromLevel, setFromLevel] = useState<EnchantmentLevel>(0)
   const [toLevel, setToLevel] = useState<EnchantmentLevel>(1)
   const [itemPriceBefore, setItemPriceBefore] = useState<number>(0)
@@ -36,9 +41,14 @@ export default function EnchantingCalculator() {
 
   const { prices, isLoading, error, refetch } = useEnchantPrices(tier)
 
+  const materialCount = useMemo(
+    () => getEnchantMaterialCount(equipmentType),
+    [equipmentType],
+  )
+
   const costBreakdown = useMemo(
-    () => calculateEnchantCost(tier, fromLevel, toLevel, prices),
-    [tier, fromLevel, toLevel, prices],
+    () => calculateEnchantCost(tier, fromLevel, toLevel, prices, equipmentType),
+    [tier, fromLevel, toLevel, prices, equipmentType],
   )
 
   const profitResult = useMemo(() => {
@@ -50,8 +60,9 @@ export default function EnchantingCalculator() {
       prices,
       itemPriceBefore,
       itemPriceAfter,
+      equipmentType,
     )
-  }, [tier, fromLevel, toLevel, prices, itemPriceBefore, itemPriceAfter])
+  }, [tier, fromLevel, toLevel, prices, itemPriceBefore, itemPriceAfter, equipmentType])
 
   return (
     <div className="space-y-6 p-6">
@@ -64,40 +75,76 @@ export default function EnchantingCalculator() {
           Calculate enchanting costs and profitability. See exactly how many
           Runes, Souls, and Relics you need.
         </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Note: .4 enchantment cannot be achieved via enchanting — it can only
+          be crafted with .4 raw materials.
+        </p>
       </div>
 
       <Separator />
 
       {/* Configuration row */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Tier selector */}
+        {/* Tier & Equipment type selector */}
         <Card>
           <CardHeader>
             <h3 className="text-base font-semibold">Item Configuration</h3>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Item Tier</Label>
-              <Select
-                value={String(tier)}
-                onValueChange={(v) => setTier(Number(v) as ItemTier)}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Tier</SelectLabel>
-                    {TIER_OPTIONS.map((t) => (
-                      <SelectItem key={t.level} value={String(t.level)}>
-                        <span style={{ color: t.color }}>
-                          T{t.level} - {t.name}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Tier selector */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Item Tier</Label>
+                <Select
+                  value={String(tier)}
+                  onValueChange={(v) => setTier(Number(v) as ItemTier)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Tier</SelectLabel>
+                      {TIER_OPTIONS.map((t) => (
+                        <SelectItem key={t.level} value={String(t.level)}>
+                          <span style={{ color: t.color }}>
+                            T{t.level} - {t.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Equipment type selector */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Equipment Type</Label>
+                <Select
+                  value={equipmentType}
+                  onValueChange={(v) => setEquipmentType(v as EquipmentType)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Type</SelectLabel>
+                      {EQUIPMENT_TYPES.map((et) => (
+                        <SelectItem key={et} value={et}>
+                          {EQUIPMENT_TYPE_LABELS[et]}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Material count info */}
+            <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">{materialCount}</span>{' '}
+              enchanting materials per step ({EQUIPMENT_TYPE_LABELS[equipmentType]})
             </div>
 
             {/* Item prices */}

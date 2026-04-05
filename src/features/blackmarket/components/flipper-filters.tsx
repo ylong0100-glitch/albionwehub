@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select'
 import { useFlipperStore } from '@/lib/stores/flipper-store'
 import { BM_CATEGORY_LABELS } from '../utils/flipper-calc'
-import { ROYAL_CITIES } from '@/lib/utils/constants'
+import { ROYAL_CITIES, QUALITIES } from '@/lib/utils/constants'
 
 // ---------------------------------------------------------------------------
 // Buy-location options (all royal cities)
@@ -31,14 +31,24 @@ const BUY_LOCATIONS = [...ROYAL_CITIES] as string[]
 const TIER_OPTIONS = [4, 5, 6, 7, 8]
 
 // ---------------------------------------------------------------------------
-// Enchantment options
+// Enchantment options (now includes .4)
 // ---------------------------------------------------------------------------
 const ENCHANTMENT_OPTIONS = [
   { value: 0, label: '.0' },
   { value: 1, label: '.1' },
   { value: 2, label: '.2' },
   { value: 3, label: '.3' },
+  { value: 4, label: '.4' },
 ]
+
+// ---------------------------------------------------------------------------
+// Quality options with colors from constants
+// ---------------------------------------------------------------------------
+const QUALITY_OPTIONS = QUALITIES.map((q) => ({
+  value: q.level,
+  label: q.name,
+  color: q.color,
+}))
 
 // ---------------------------------------------------------------------------
 // Props
@@ -72,6 +82,7 @@ export function FlipperFilters({
     minProfit,
     isPremium,
     maxDataAgeHours,
+    qualities,
     setBuyLocation,
     setMinTier,
     setMaxTier,
@@ -80,6 +91,7 @@ export function FlipperFilters({
     setMinProfit,
     setIsPremium,
     setMaxDataAgeHours,
+    toggleQuality,
     resetFilters,
   } = useFlipperStore()
 
@@ -214,6 +226,33 @@ export function FlipperFilters({
                     onClick={() => toggleEnchantment(ench.value)}
                   >
                     {ench.label}
+                  </Badge>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Row 2b: Quality */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Quality</Label>
+            <div className="flex flex-wrap gap-2">
+              {QUALITY_OPTIONS.map((q) => {
+                const active = qualities.includes(q.value)
+                return (
+                  <Badge
+                    key={q.value}
+                    variant={active ? 'default' : 'outline'}
+                    className={cn(
+                      'cursor-pointer select-none transition-colors',
+                    )}
+                    style={
+                      active
+                        ? { backgroundColor: q.color, color: '#fff', borderColor: q.color }
+                        : { borderColor: q.color, color: q.color }
+                    }
+                    onClick={() => toggleQuality(q.value)}
+                  >
+                    {q.label}
                   </Badge>
                 )
               })}

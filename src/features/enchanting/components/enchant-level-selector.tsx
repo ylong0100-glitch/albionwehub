@@ -38,8 +38,9 @@ export function EnchantLevelSelector({
   onToChange,
   className,
 }: EnchantLevelSelectorProps) {
-  const fromOptions: EnchantmentLevel[] = [0, 1, 2, 3]
-  const toOptions: EnchantmentLevel[] = [1, 2, 3, 4]
+  // .4 enchantment cannot be achieved via enchanting — only via crafting with .4 raw materials
+  const fromOptions: EnchantmentLevel[] = [0, 1, 2]
+  const toOptions: EnchantmentLevel[] = [1, 2, 3]
 
   const handleFromChange = (value: string | null) => {
     if (!value) return
@@ -136,11 +137,10 @@ export function EnchantLevelSelector({
             Upgrade Path
           </Label>
           <div className="flex items-center gap-1">
-            {[0, 1, 2, 3, 4].map((level) => {
+            {[0, 1, 2, 3].map((level) => {
               const isInRange = level >= fromLevel && level <= toLevel
               const isFrom = level === fromLevel
               const isTo = level === toLevel
-              const isActive = level > fromLevel && level <= toLevel
 
               return (
                 <div key={level} className="flex items-center">
@@ -160,7 +160,7 @@ export function EnchantLevelSelector({
                   </div>
 
                   {/* Connecting bar */}
-                  {level < 4 && (
+                  {level < 3 && (
                     <div
                       className={cn(
                         'h-1 w-6 rounded-full transition-all',

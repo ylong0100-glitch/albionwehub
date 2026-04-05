@@ -121,7 +121,7 @@ export function getDataAgeHours(dateStr: string): number {
 // ---------------------------------------------------------------------------
 export function filterAndSortFlips(
   opportunities: FlipOpportunity[],
-  filters: Pick<FlipperState, 'minProfit' | 'categories' | 'minTier' | 'maxTier' | 'enchantmentLevels'>,
+  filters: Pick<FlipperState, 'minProfit' | 'categories' | 'minTier' | 'maxTier' | 'enchantmentLevels' | 'qualities'>,
 ): FlipOpportunity[] {
   return opportunities
     .filter((flip) => {
@@ -133,6 +133,11 @@ export function filterAndSortFlips(
 
       // Enchantment levels
       if (!filters.enchantmentLevels.includes(flip.enchantment)) return false
+
+      // Quality filter
+      if (filters.qualities && filters.qualities.length > 0) {
+        if (!filters.qualities.includes(flip.sellQuality)) return false
+      }
 
       // Categories
       if (filters.categories.length > 0 && !filters.categories.includes(flip.category)) {

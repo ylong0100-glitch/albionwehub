@@ -19,6 +19,7 @@ export interface FlipperState {
   minProfit: number
   isPremium: boolean
   maxDataAgeHours: number  // only show flips with data newer than this (0 = no limit)
+  qualities: number[]      // quality levels to include (1-5)
 
   // Actions
   setBuyLocation: (location: string) => void
@@ -32,6 +33,8 @@ export interface FlipperState {
   setMinProfit: (profit: number) => void
   setIsPremium: (premium: boolean) => void
   setMaxDataAgeHours: (hours: number) => void
+  setQualities: (qualities: number[]) => void
+  toggleQuality: (q: number) => void
   resetFilters: () => void
 }
 
@@ -53,11 +56,12 @@ const DEFAULT_STATE = {
   sellLocation: 'Black Market',
   minTier: 4,
   maxTier: 8,
-  enchantmentLevels: [0, 1, 2, 3],
+  enchantmentLevels: [0, 1, 2, 3, 4],
   categories: [...DEFAULT_CATEGORIES],
   minProfit: 0,
   isPremium: true,
   maxDataAgeHours: 24,  // default: only show data from last 24 hours
+  qualities: [1, 2, 3, 4, 5],
 }
 
 // ---------------------------------------------------------------------------
@@ -105,6 +109,15 @@ export const useFlipperStore = create<FlipperState>()(
       setIsPremium: (isPremium) => set({ isPremium }),
       setMaxDataAgeHours: (maxDataAgeHours) => set({ maxDataAgeHours }),
 
+      setQualities: (qualities) => set({ qualities }),
+
+      toggleQuality: (q) =>
+        set((state) => ({
+          qualities: state.qualities.includes(q)
+            ? state.qualities.filter((v) => v !== q)
+            : [...state.qualities, q].sort(),
+        })),
+
       resetFilters: () => set(DEFAULT_STATE),
     }),
     {
@@ -129,6 +142,7 @@ export const useFlipperStore = create<FlipperState>()(
         minProfit: state.minProfit,
         isPremium: state.isPremium,
         maxDataAgeHours: state.maxDataAgeHours,
+        qualities: state.qualities,
       }),
     },
   ),

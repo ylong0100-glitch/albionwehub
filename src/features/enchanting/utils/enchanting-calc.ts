@@ -10,6 +10,17 @@ import type { ItemTier, EnchantmentLevel } from '@/types'
 
 export type EnchantMaterialType = 'RUNE' | 'SOUL' | 'RELIC'
 
+/** Item type categories that determine the base crafting material count */
+export type EquipmentType =
+  | '1h_weapon'
+  | '2h_weapon'
+  | 'helmet'
+  | 'chest'
+  | 'shoes'
+  | 'offhand'
+  | 'cape'
+  | 'bag'
+
 export interface EnchantStep {
   fromLevel: EnchantmentLevel
   toLevel: EnchantmentLevel
@@ -49,25 +60,55 @@ export interface EnchantProfitResult {
 // ---------------------------------------------------------------------------
 
 /**
- * Base enchanting materials per tier
- * T4: 48, T5: 60, T6: 72, T7: 84, T8: 96
+ * Base crafting material count per equipment type.
+ * Enchantment material count = base crafting materials × 12.
  */
-const BASE_MATERIAL_COUNT: Record<number, number> = {
-  4: 48,
-  5: 60,
-  6: 72,
-  7: 84,
-  8: 96,
+export const EQUIPMENT_TYPE_CRAFT_MATERIALS: Record<EquipmentType, number> = {
+  '1h_weapon': 24,
+  '2h_weapon': 32,
+  helmet: 8,
+  chest: 16,
+  shoes: 8,
+  offhand: 8,
+  cape: 8,
+  bag: 16,
 }
 
+/** Display labels for equipment types */
+export const EQUIPMENT_TYPE_LABELS: Record<EquipmentType, string> = {
+  '1h_weapon': '1H Weapon',
+  '2h_weapon': '2H Weapon',
+  helmet: 'Helmet',
+  chest: 'Chest Armor',
+  shoes: 'Shoes',
+  offhand: 'Offhand',
+  cape: 'Cape',
+  bag: 'Bag',
+}
+
+/** All equipment types for iteration */
+export const EQUIPMENT_TYPES: EquipmentType[] = [
+  '1h_weapon',
+  '2h_weapon',
+  'helmet',
+  'chest',
+  'shoes',
+  'offhand',
+  'cape',
+  'bag',
+]
+
+/** Multiplier to convert crafting materials to enchanting materials */
+const ENCHANT_MATERIAL_MULTIPLIER = 12
+
 /**
- * Material type required for each enchantment step
+ * Material type required for each enchantment step.
+ * .3 -> .4 is NOT possible via enchanting (must craft with .4 raw materials).
  */
 const STEP_MATERIAL_TYPE: Record<string, EnchantMaterialType> = {
   '0-1': 'RUNE',
   '1-2': 'SOUL',
   '2-3': 'RELIC',
-  '3-4': 'RELIC',
 }
 
 export const ENCHANT_MATERIAL_INFO: Record<
@@ -77,6 +118,46 @@ export const ENCHANT_MATERIAL_INFO: Record<
   RUNE: { label: 'Rune', color: 'text-blue-400' },
   SOUL: { label: 'Soul', color: 'text-purple-400' },
   RELIC: { label: 'Relic', color: 'text-amber-400' },
+}
+
+// ---------------------------------------------------------------------------
+// Item type detection from item ID
+// ---------------------------------------------------------------------------
+
+/**
+ * Determine the equipment type from an item ID string using heuristics.
+ */
+export function getEquipmentTypeFromItemId(itemId: string): EquipmentType | null {
+  const id = itemId.toUpperCase()
+
+  if (id.includes('_HEAD_') || id.includes('_HELMET_')) return 'helmet'
+  if (id.includes('_ARMOR_')) return 'chest'
+  if (id.includes('_SHOES_')) return 'shoes'
+  if (id.includes('_CAPE')) return 'cape'
+  if (id.includes('_BAG')) return 'bag'
+  if (id.includes('_OFF_')) return 'offhand'
+  if (id.includes('_2H_')) return '2h_weapon'
+  if (id.includes('_MAIN_')) return '1h_weapon'
+
+  return null
+}
+
+/**
+ * Get the enchanting material count per step for an equipment type.
+ * Formula: base crafting materials × 12
+ */
+export function getEnchantMaterialCount(equipmentType: EquipmentType): number {
+  return EQUIPMENT_TYPE_CRAFT_MATERIALS[equipmentType] * ENCHANT_MATERIAL_MULTIPLIER
+}
+
+/**
+ * Get the enchanting material count from an item ID.
+ * Falls back to 192 (chest armor default) if type cannot be determined.
+ */
+export function getEnchantMaterialCountFromItemId(itemId: string): number {
+  const eqType = getEquipmentTypeFromItemId(itemId)
+  if (!eqType) return 192 // default fallback
+  return getEnchantMaterialCount(eqType)
 }
 
 // ---------------------------------------------------------------------------
@@ -94,27 +175,26 @@ export function getMaterialItemId(
 }
 
 /**
- * Get the base material count for a tier
- */
-export function getBaseMaterialCount(tier: ItemTier): number {
-  return BASE_MATERIAL_COUNT[tier] ?? 48
-}
-
-/**
- * Get the enchantment steps needed from one level to another
+ * Get the enchantment steps needed from one level to another.
+ * Note: .3 -> .4 is NOT possible via enchanting.
+ * Max enchant target is .3.
  */
 export function getEnchantSteps(
   tier: ItemTier,
   fromLevel: EnchantmentLevel,
   toLevel: EnchantmentLevel,
+  equipmentType: EquipmentType,
 ): EnchantStep[] {
   if (fromLevel >= toLevel) return []
   if (tier < 4 || tier > 8) return []
 
-  const steps: EnchantStep[] = []
-  const baseCount = getBaseMaterialCount(tier)
+  // Cap toLevel at 3 since .4 cannot be achieved via enchanting
+  const effectiveToLevel = Math.min(toLevel, 3) as EnchantmentLevel
 
-  for (let level = fromLevel; level < toLevel; level++) {
+  const steps: EnchantStep[] = []
+  const materialCount = getEnchantMaterialCount(equipmentType)
+
+  for (let level = fromLevel; level < effectiveToLevel; level++) {
     const nextLevel = (level + 1) as EnchantmentLevel
     const key = `${level}-${nextLevel}`
     const materialType = STEP_MATERIAL_TYPE[key]
@@ -125,7 +205,7 @@ export function getEnchantSteps(
       toLevel: nextLevel,
       materialType,
       materialItemId: getMaterialItemId(tier, materialType),
-      quantity: baseCount,
+      quantity: materialCount,
     })
   }
 
@@ -163,8 +243,9 @@ export function calculateEnchantCost(
   fromLevel: EnchantmentLevel,
   toLevel: EnchantmentLevel,
   prices: Record<string, number>,
+  equipmentType: EquipmentType,
 ): EnchantCostBreakdown {
-  const steps = getEnchantSteps(tier, fromLevel, toLevel)
+  const steps = getEnchantSteps(tier, fromLevel, toLevel, equipmentType)
 
   let totalRuneCost = 0
   let totalSoulCost = 0
@@ -224,12 +305,14 @@ export function calculateEnchantProfit(
   materialPrices: Record<string, number>,
   itemPriceBefore: number,
   itemPriceAfter: number,
+  equipmentType: EquipmentType,
 ): EnchantProfitResult {
   const costBreakdown = calculateEnchantCost(
     tier,
     fromLevel,
     toLevel,
     materialPrices,
+    equipmentType,
   )
 
   const enchantCost = costBreakdown.totalCost

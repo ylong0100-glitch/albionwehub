@@ -6,6 +6,7 @@ import {
   ArrowUp,
   ArrowDown,
   AlertTriangle,
+  Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -15,20 +16,21 @@ import { ItemIcon } from '@/components/shared/item-icon'
 import { PriceDisplay } from '@/components/shared/price-display'
 import { EmptyState } from '@/components/shared/empty-state'
 import { formatSilver, formatTimeAgo } from '@/lib/utils/format'
-import type { FlipOpportunity } from '../utils/flipper-calc'
 import { getDataAgeHours } from '../utils/flipper-calc'
+import type { EnchantFlipOpportunity } from '../utils/enchant-flip-calc'
 
 // ---------------------------------------------------------------------------
-// Sortable column keys
+// Sort keys
 // ---------------------------------------------------------------------------
 type SortKey =
   | 'itemName'
   | 'tier'
-  | 'buyPrice'
-  | 'sellPrice'
-  | 'netProfit'
-  | 'profitMargin'
-  | 'dataAge'
+  | 'basePrice'
+  | 'runeCost'
+  | 'totalCost'
+  | 'bmPrice'
+  | 'enchantFlipProfit'
+  | 'profitDifference'
 
 interface SortConfig {
   key: SortKey
@@ -38,39 +40,26 @@ interface SortConfig {
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
-interface FlipperTableProps {
-  opportunities: FlipOpportunity[]
+interface EnchantFlipTableProps {
+  opportunities: EnchantFlipOpportunity[]
   isScanning: boolean
-  onRowClick: (flip: FlipOpportunity) => void
   className?: string
-}
-
-// ---------------------------------------------------------------------------
-// Helper: get oldest data age between buy and sell dates
-// ---------------------------------------------------------------------------
-function getOldestAge(flip: FlipOpportunity): number {
-  return Math.max(
-    getDataAgeHours(flip.buyPriceDate),
-    getDataAgeHours(flip.sellPriceDate),
-  )
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
-export function FlipperTable({
+export function EnchantFlipTable({
   opportunities,
   isScanning,
-  onRowClick,
   className,
-}: FlipperTableProps) {
+}: EnchantFlipTableProps) {
   const [sort, setSort] = React.useState<SortConfig>({
-    key: 'netProfit',
+    key: 'enchantFlipProfit',
     direction: 'desc',
   })
   const [search, setSearch] = React.useState('')
 
-  // Toggle sort on column header click
   const handleSort = (key: SortKey) => {
     setSort((prev) => ({
       key,
@@ -78,16 +67,14 @@ export function FlipperTable({
     }))
   }
 
-  // Filter by search term
+  // Filter by search
   const filtered = React.useMemo(() => {
     if (!search.trim()) return opportunities
     const q = search.toLowerCase()
-    return opportunities.filter((flip) =>
-      flip.itemName.toLowerCase().includes(q),
-    )
+    return opportunities.filter((f) => f.itemName.toLowerCase().includes(q))
   }, [opportunities, search])
 
-  // Sort the data
+  // Sort
   const sorted = React.useMemo(() => {
     const arr = [...filtered]
     const dir = sort.direction === 'asc' ? 1 : -1
@@ -97,17 +84,19 @@ export function FlipperTable({
         case 'itemName':
           return dir * a.itemName.localeCompare(b.itemName)
         case 'tier':
-          return dir * (a.tier - b.tier || a.enchantment - b.enchantment)
-        case 'buyPrice':
-          return dir * (a.buyPrice - b.buyPrice)
-        case 'sellPrice':
-          return dir * (a.sellPrice - b.sellPrice)
-        case 'netProfit':
-          return dir * (a.netProfit - b.netProfit)
-        case 'profitMargin':
-          return dir * (a.profitMargin - b.profitMargin)
-        case 'dataAge':
-          return dir * (getOldestAge(a) - getOldestAge(b))
+          return dir * (a.tier - b.tier)
+        case 'basePrice':
+          return dir * (a.basePrice - b.basePrice)
+        case 'runeCost':
+          return dir * (a.runeTotalCost - b.runeTotalCost)
+        case 'totalCost':
+          return dir * (a.totalCost - b.totalCost)
+        case 'bmPrice':
+          return dir * (a.bmPriceEnchanted - b.bmPriceEnchanted)
+        case 'enchantFlipProfit':
+          return dir * (a.enchantFlipProfit - b.enchantFlipProfit)
+        case 'profitDifference':
+          return dir * (a.profitDifference - b.profitDifference)
         default:
           return 0
       }
@@ -116,7 +105,6 @@ export function FlipperTable({
     return arr
   }, [filtered, sort])
 
-  // Sort icon component
   const SortIcon = ({ column }: { column: SortKey }) => {
     if (sort.key !== column)
       return <ArrowUpDown className="ml-1 inline size-3 opacity-40" />
@@ -127,14 +115,13 @@ export function FlipperTable({
     )
   }
 
-  // Total potential profit
-  const totalProfit = filtered.reduce((s, o) => s + o.netProfit, 0)
+  const totalProfit = filtered.reduce((s, o) => s + o.enchantFlipProfit, 0)
 
   if (!isScanning && opportunities.length === 0) {
     return (
       <EmptyState
-        title="No flip opportunities"
-        description="Click 'Scan Market' to search for profitable Black Market flips."
+        title="No enchant-flip opportunities"
+        description="Click 'Scan Market' to search for profitable enchant-flip opportunities."
         className={className}
       />
     )
@@ -145,7 +132,8 @@ export function FlipperTable({
       <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
         <div className="space-y-0.5">
           <h3 className="text-sm font-semibold">
-            Flip Opportunities
+            <Sparkles className="mr-1.5 inline size-4" />
+            Enchant & Flip Opportunities
             {filtered.length > 0 && (
               <Badge variant="secondary" className="ml-2 font-mono">
                 {filtered.length}
@@ -161,7 +149,6 @@ export function FlipperTable({
             </p>
           )}
         </div>
-        {/* Search filter */}
         <div className="w-48">
           <Input
             type="text"
@@ -191,62 +178,66 @@ export function FlipperTable({
                   Tier
                   <SortIcon column="tier" />
                 </th>
-                <th className="whitespace-nowrap px-3 py-2.5">Buy City</th>
                 <th
                   className="cursor-pointer whitespace-nowrap px-3 py-2.5 text-right hover:text-foreground"
-                  onClick={() => handleSort('buyPrice')}
+                  onClick={() => handleSort('basePrice')}
                 >
-                  Buy Price
-                  <SortIcon column="buyPrice" />
+                  Base Price (.0)
+                  <SortIcon column="basePrice" />
                 </th>
                 <th
                   className="cursor-pointer whitespace-nowrap px-3 py-2.5 text-right hover:text-foreground"
-                  onClick={() => handleSort('sellPrice')}
+                  onClick={() => handleSort('runeCost')}
                 >
-                  BM Price
-                  <SortIcon column="sellPrice" />
+                  Rune Cost
+                  <SortIcon column="runeCost" />
+                </th>
+                <th
+                  className="cursor-pointer whitespace-nowrap px-3 py-2.5 text-right hover:text-foreground"
+                  onClick={() => handleSort('totalCost')}
+                >
+                  Total Cost
+                  <SortIcon column="totalCost" />
+                </th>
+                <th
+                  className="cursor-pointer whitespace-nowrap px-3 py-2.5 text-right hover:text-foreground"
+                  onClick={() => handleSort('bmPrice')}
+                >
+                  BM Price (.1)
+                  <SortIcon column="bmPrice" />
                 </th>
                 <th className="whitespace-nowrap px-3 py-2.5 text-right">
-                  Fees
+                  Tax
                 </th>
                 <th
                   className="cursor-pointer whitespace-nowrap px-3 py-2.5 text-right hover:text-foreground"
-                  onClick={() => handleSort('netProfit')}
+                  onClick={() => handleSort('enchantFlipProfit')}
                 >
                   Net Profit
-                  <SortIcon column="netProfit" />
+                  <SortIcon column="enchantFlipProfit" />
                 </th>
                 <th
                   className="cursor-pointer whitespace-nowrap px-3 py-2.5 text-right hover:text-foreground"
-                  onClick={() => handleSort('profitMargin')}
+                  onClick={() => handleSort('profitDifference')}
                 >
-                  Margin
-                  <SortIcon column="profitMargin" />
-                </th>
-                <th
-                  className="cursor-pointer whitespace-nowrap px-3 py-2.5 text-right hover:text-foreground"
-                  onClick={() => handleSort('dataAge')}
-                >
-                  Data Age
-                  <SortIcon column="dataAge" />
+                  vs Direct Flip
+                  <SortIcon column="profitDifference" />
                 </th>
               </tr>
             </thead>
             <tbody>
               {sorted.map((flip, idx) => {
-                const margin = flip.profitMargin * 100
-                const ageHours = getOldestAge(flip)
+                const ageHours = getDataAgeHours(flip.bmPriceDateEnchanted)
                 const isStale = ageHours > 2
+                const isBetterThanDirect = flip.profitDifference > 0
 
                 return (
                   <tr
-                    key={`${flip.itemId}-${flip.buyQuality}-${idx}`}
+                    key={`${flip.itemId}-${idx}`}
                     className={cn(
-                      'cursor-pointer border-b transition-colors hover:bg-muted/50',
-                      margin >= 10 && 'bg-green-500/5',
-                      margin < 3 && margin > 0 && 'bg-red-500/5',
+                      'border-b transition-colors hover:bg-muted/50',
+                      isBetterThanDirect && 'bg-green-500/5',
                     )}
-                    onClick={() => onRowClick(flip)}
                   >
                     {/* Item */}
                     <td className="px-4 py-2">
@@ -254,8 +245,8 @@ export function FlipperTable({
                         <ItemIcon
                           itemId={flip.itemId}
                           size={32}
-                          quality={flip.buyQuality}
-                          enchantment={flip.enchantment}
+                          quality={1}
+                          enchantment={0}
                         />
                         <span className="max-w-[200px] truncate font-medium">
                           {flip.itemName}
@@ -267,26 +258,35 @@ export function FlipperTable({
                     <td className="whitespace-nowrap px-3 py-2">
                       <Badge variant="outline" className="font-mono text-xs">
                         T{flip.tier}
-                        {flip.enchantment > 0 && `.${flip.enchantment}`}
                       </Badge>
                     </td>
 
-                    {/* Buy City */}
-                    <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
-                      {flip.buyCity}
-                    </td>
-
-                    {/* Buy Price */}
+                    {/* Base Price (.0) */}
                     <td className="whitespace-nowrap px-3 py-2 text-right">
-                      <PriceDisplay amount={flip.buyPrice} showIcon={false} />
+                      <PriceDisplay amount={flip.basePrice} showIcon={false} />
                     </td>
 
-                    {/* BM Price */}
+                    {/* Rune Cost */}
                     <td className="whitespace-nowrap px-3 py-2 text-right">
-                      <PriceDisplay amount={flip.sellPrice} showIcon={false} />
+                      <div>
+                        <PriceDisplay amount={flip.runeTotalCost} showIcon={false} />
+                        <div className="text-[10px] text-muted-foreground">
+                          {flip.runeCount} x {formatSilver(flip.runePrice)}
+                        </div>
+                      </div>
                     </td>
 
-                    {/* Fees */}
+                    {/* Total Cost */}
+                    <td className="whitespace-nowrap px-3 py-2 text-right font-medium">
+                      <PriceDisplay amount={flip.totalCost} showIcon={false} />
+                    </td>
+
+                    {/* BM Price (.1) */}
+                    <td className="whitespace-nowrap px-3 py-2 text-right">
+                      <PriceDisplay amount={flip.bmPriceEnchanted} showIcon={false} />
+                    </td>
+
+                    {/* Tax */}
                     <td className="whitespace-nowrap px-3 py-2 text-right text-muted-foreground font-mono text-xs">
                       {formatSilver(flip.salesTax)}
                     </td>
@@ -296,46 +296,35 @@ export function FlipperTable({
                       <span
                         className={cn(
                           'font-semibold font-mono',
-                          flip.netProfit > 0
+                          flip.enchantFlipProfit > 0
                             ? 'text-green-500'
                             : 'text-red-500',
                         )}
                       >
-                        {formatSilver(flip.netProfit, { showSign: true })}
+                        {formatSilver(flip.enchantFlipProfit, { showSign: true })}
                       </span>
                     </td>
 
-                    {/* Margin */}
+                    {/* vs Direct Flip */}
                     <td className="whitespace-nowrap px-3 py-2 text-right">
                       <span
                         className={cn(
                           'font-mono text-xs',
-                          margin >= 10
+                          flip.profitDifference > 0
                             ? 'text-green-500'
-                            : margin < 3
+                            : flip.profitDifference < 0
                               ? 'text-red-500'
                               : 'text-muted-foreground',
                         )}
                       >
-                        {margin.toFixed(1)}%
+                        {flip.profitDifference > 0 ? '+' : ''}
+                        {formatSilver(flip.profitDifference)}
                       </span>
-                    </td>
-
-                    {/* Data Age */}
-                    <td className="whitespace-nowrap px-3 py-2 text-right">
-                      <span
-                        className={cn(
-                          'inline-flex items-center gap-1 text-xs',
-                          isStale
-                            ? 'text-amber-500'
-                            : 'text-muted-foreground',
-                        )}
-                      >
-                        {isStale && (
-                          <AlertTriangle className="size-3" />
-                        )}
-                        {formatTimeAgo(flip.sellPriceDate)}
-                      </span>
+                      {flip.directFlipProfit > 0 && (
+                        <div className="text-[10px] text-muted-foreground">
+                          Direct: {formatSilver(flip.directFlipProfit)}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )
