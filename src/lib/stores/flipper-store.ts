@@ -18,6 +18,7 @@ export interface FlipperState {
   categories: string[]
   minProfit: number
   isPremium: boolean
+  maxDataAgeHours: number  // only show flips with data newer than this (0 = no limit)
 
   // Actions
   setBuyLocation: (location: string) => void
@@ -30,6 +31,7 @@ export interface FlipperState {
   toggleCategory: (category: string) => void
   setMinProfit: (profit: number) => void
   setIsPremium: (premium: boolean) => void
+  setMaxDataAgeHours: (hours: number) => void
   resetFilters: () => void
 }
 
@@ -55,6 +57,7 @@ const DEFAULT_STATE = {
   categories: [...DEFAULT_CATEGORIES],
   minProfit: 0,
   isPremium: true,
+  maxDataAgeHours: 24,  // default: only show data from last 24 hours
 }
 
 // ---------------------------------------------------------------------------
@@ -100,6 +103,7 @@ export const useFlipperStore = create<FlipperState>()(
 
       setMinProfit: (minProfit) => set({ minProfit }),
       setIsPremium: (isPremium) => set({ isPremium }),
+      setMaxDataAgeHours: (maxDataAgeHours) => set({ maxDataAgeHours }),
 
       resetFilters: () => set(DEFAULT_STATE),
     }),
@@ -124,6 +128,7 @@ export const useFlipperStore = create<FlipperState>()(
         categories: state.categories,
         minProfit: state.minProfit,
         isPremium: state.isPremium,
+        maxDataAgeHours: state.maxDataAgeHours,
       }),
     },
   ),

@@ -43,15 +43,15 @@ export interface FlipOpportunity {
   enchantment: number
   category: string
   buyCity: string
-  buyPrice: number
+  buyPrice: number       // sell_price_min in buy city (instant buy from sell order)
   buyPriceDate: string
-  sellPrice: number
+  buyQuality: number     // quality of item available to buy
+  sellPrice: number      // buy_price_max on Black Market (BM buy order price)
   sellPriceDate: string
-  setupFee: number
+  sellQuality: number    // quality required by BM buy order
   salesTax: number
   netProfit: number
   profitMargin: number
-  quality: number
 }
 
 // ---------------------------------------------------------------------------
@@ -62,33 +62,36 @@ const NON_PREMIUM_SALES_TAX = 0.08
 // ---------------------------------------------------------------------------
 // Calculate net profit for a flip
 // ---------------------------------------------------------------------------
+/**
+ * Calculate net profit for a Black Market flip.
+ *
+ * Flow: Buy from city sell order (instant buy, NO fees for buyer)
+ *       → Walk to Black Market → Sell to BM buy order (only sales tax)
+ *
+ * Net Profit = BM_buy_price × (1 - salesTax) - city_sell_price
+ * No setup fee — you're buying from an existing sell order (instant purchase).
+ */
 export function calculateFlipProfit(
   buyPrice: number,
   sellPrice: number,
   isPremium: boolean,
 ): {
-  setupFee: number
   salesTax: number
   netProfit: number
   profitMargin: number
 } {
   const taxRate = isPremium ? MARKET_SALES_TAX : NON_PREMIUM_SALES_TAX
 
-  // Fees paid when buying (setup fee on buy order in city market)
-  const setupFee = buyPrice * MARKET_SETUP_FEE
-
-  // Tax paid when selling on Black Market
+  // Tax paid when selling to Black Market buy order
   const salesTax = sellPrice * taxRate
 
-  // Net profit = sell revenue after tax - buy cost including setup fee
-  const netProfit = (sellPrice - salesTax) - (buyPrice + setupFee)
+  // Net profit = sell revenue after tax - buy cost (no fees on buying)
+  const netProfit = (sellPrice - salesTax) - buyPrice
 
   // Profit margin as percentage of buy cost
-  const totalCost = buyPrice + setupFee
-  const profitMargin = totalCost > 0 ? netProfit / totalCost : 0
+  const profitMargin = buyPrice > 0 ? netProfit / buyPrice : 0
 
   return {
-    setupFee: Math.round(setupFee),
     salesTax: Math.round(salesTax),
     netProfit: Math.round(netProfit),
     profitMargin,

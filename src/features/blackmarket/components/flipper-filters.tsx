@@ -71,6 +71,7 @@ export function FlipperFilters({
     categories,
     minProfit,
     isPremium,
+    maxDataAgeHours,
     setBuyLocation,
     setMinTier,
     setMaxTier,
@@ -78,6 +79,7 @@ export function FlipperFilters({
     toggleCategory,
     setMinProfit,
     setIsPremium,
+    setMaxDataAgeHours,
     resetFilters,
   } = useFlipperStore()
 
@@ -177,6 +179,20 @@ export function FlipperFilters({
                 value={minProfit}
                 onChange={(e) => setMinProfit(Number(e.target.value) || 0)}
                 placeholder="0"
+              />
+            </div>
+
+            {/* Max Data Age */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Max Data Age (hours)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={168}
+                step={1}
+                value={maxDataAgeHours}
+                onChange={(e) => setMaxDataAgeHours(Number(e.target.value) || 0)}
+                placeholder="24"
               />
             </div>
           </div>

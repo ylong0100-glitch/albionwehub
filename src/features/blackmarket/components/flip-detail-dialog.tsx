@@ -40,7 +40,7 @@ export function FlipDetailDialog({
   const buyAgeHours = getDataAgeHours(flip.buyPriceDate)
   const sellAgeHours = getDataAgeHours(flip.sellPriceDate)
   const isStale = buyAgeHours > 2 || sellAgeHours > 2
-  const totalCost = flip.buyPrice + flip.setupFee
+  const totalCost = flip.buyPrice
   const totalRevenue = flip.sellPrice - flip.salesTax
 
   return (
@@ -51,7 +51,7 @@ export function FlipDetailDialog({
             <ItemIcon
               itemId={flip.itemId}
               size={48}
-              quality={flip.quality}
+              quality={flip.buyQuality}
               enchantment={flip.enchantment}
             />
             <div className="min-w-0">
@@ -108,21 +108,11 @@ export function FlipDetailDialog({
           </h4>
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Item price</span>
+              <span className="text-muted-foreground">Item price (instant buy from sell order)</span>
               <PriceDisplay amount={flip.buyPrice} showIcon={false} />
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">
-                Setup fee (2.5%)
-              </span>
-              <span className="font-mono text-red-500">
-                +{formatSilver(flip.setupFee)}
-              </span>
-            </div>
-            <Separator className="my-1" />
-            <div className="flex justify-between font-medium">
-              <span>Total cost</span>
-              <PriceDisplay amount={totalCost} showIcon={false} />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>No fees — buying from existing sell order</span>
             </div>
           </div>
         </div>

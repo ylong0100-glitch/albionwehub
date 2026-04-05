@@ -13,6 +13,7 @@ import {
   BM_CATEGORIES,
   calculateFlipProfit,
   isStaleDate,
+  getDataAgeHours,
   type FlipOpportunity,
 } from '../utils/flipper-calc'
 
@@ -70,6 +71,7 @@ export function useFlipperScan(): FlipperScanResult {
     enchantmentLevels,
     categories,
     isPremium,
+    maxDataAgeHours,
   } = useFlipperStore()
 
   const { itemsList, loaded, getItem } = useGameDataStore()
@@ -218,69 +220,81 @@ export function useFlipperScan(): FlipperScanResult {
   // -------------------------------------------------------------------------
   const processBatch = useCallback(
     (entries: PriceEntry[]): FlipOpportunity[] => {
-      // Group by item_id + quality
-      const grouped = new Map<string, { buy?: PriceEntry; sell?: PriceEntry }>()
-
+      // Group entries by item_id
+      const byItem = new Map<string, PriceEntry[]>()
       for (const entry of entries) {
-        const key = `${entry.item_id}_${entry.quality}`
-        if (!grouped.has(key)) {
-          grouped.set(key, {})
-        }
-        const group = grouped.get(key)!
-
-        if (entry.city === 'Black Market') {
-          group.sell = entry
-        } else {
-          // Buy city — we want the cheapest sell order (sell_price_min)
-          if (!group.buy || entry.sell_price_min < group.buy.sell_price_min) {
-            group.buy = entry
-          }
-        }
+        const list = byItem.get(entry.item_id) || []
+        list.push(entry)
+        byItem.set(entry.item_id, list)
       }
 
       const flips: FlipOpportunity[] = []
 
-      for (const [, group] of grouped) {
-        const { buy, sell } = group
-        if (!buy || !sell) continue
+      for (const [itemId, itemEntries] of byItem) {
+        // Separate buy city entries and BM entries
+        const buyEntries = itemEntries.filter((e) => e.city !== 'Black Market')
+        const bmEntries = itemEntries.filter((e) => e.city === 'Black Market')
 
-        // Validate prices
-        const cityPrice = buy.sell_price_min
-        const bmPrice = sell.buy_price_max
+        // For each BM buy order (per quality), find matching buy opportunity
+        for (const bmEntry of bmEntries) {
+          if (bmEntry.buy_price_max <= 0) continue
+          if (isStaleDate(bmEntry.buy_price_max_date)) continue
 
-        if (cityPrice <= 0 || bmPrice <= 0) continue
-        if (isStaleDate(buy.sell_price_min_date)) continue
-        if (isStaleDate(sell.buy_price_max_date)) continue
+          const bmQuality = bmEntry.quality // BM wants this quality
 
-        const { setupFee, salesTax, netProfit, profitMargin } =
-          calculateFlipProfit(cityPrice, bmPrice, isPremium)
+          // Find cheapest sell order in buy city with quality >= BM required quality
+          // (higher quality can fill lower quality BM orders)
+          const validBuyEntries = buyEntries.filter(
+            (e) => e.quality >= bmQuality && e.sell_price_min > 0 && !isStaleDate(e.sell_price_min_date)
+          )
 
-        if (netProfit <= 0) continue
+          if (validBuyEntries.length === 0) continue
 
-        const item = getItem(buy.item_id)
+          // Pick the cheapest
+          const cheapest = validBuyEntries.reduce((a, b) =>
+            a.sell_price_min < b.sell_price_min ? a : b
+          )
 
-        flips.push({
-          itemId: buy.item_id,
-          itemName: item?.name ?? buy.item_id,
-          tier: item?.tier ?? 0,
-          enchantment: item?.enchantment ?? 0,
-          category: item?.category ?? '',
-          buyCity: buy.city,
-          buyPrice: cityPrice,
-          buyPriceDate: buy.sell_price_min_date,
-          sellPrice: bmPrice,
-          sellPriceDate: sell.buy_price_max_date,
-          setupFee,
-          salesTax,
-          netProfit,
-          profitMargin,
-          quality: buy.quality,
-        })
+          const cityPrice = cheapest.sell_price_min
+          const bmPrice = bmEntry.buy_price_max
+
+          // Filter by data age if configured
+          if (maxDataAgeHours > 0) {
+            const buyAge = getDataAgeHours(cheapest.sell_price_min_date)
+            const sellAge = getDataAgeHours(bmEntry.buy_price_max_date)
+            if (buyAge > maxDataAgeHours || sellAge > maxDataAgeHours) continue
+          }
+
+          const { salesTax, netProfit, profitMargin } =
+            calculateFlipProfit(cityPrice, bmPrice, isPremium)
+
+          if (netProfit <= 0) continue
+
+          const item = getItem(itemId)
+
+          flips.push({
+            itemId,
+            itemName: item?.name ?? itemId,
+            tier: item?.tier ?? 0,
+            enchantment: item?.enchantment ?? 0,
+            category: item?.category ?? '',
+            buyCity: cheapest.city,
+            buyPrice: cityPrice,
+            buyPriceDate: cheapest.sell_price_min_date,
+            buyQuality: cheapest.quality,
+            sellPrice: bmPrice,
+            sellPriceDate: bmEntry.buy_price_max_date,
+            sellQuality: bmQuality,
+            salesTax,
+            netProfit,
+            profitMargin,
+          })
+        }
       }
 
       return flips
     },
-    [isPremium, getItem],
+    [isPremium, maxDataAgeHours, getItem],
   )
 
   // -------------------------------------------------------------------------
