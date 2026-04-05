@@ -36,6 +36,7 @@ yarn-error.log*
 
 # game data (built by script)
 /game-data/
+/public/game-data/
 
 # PWA generated files
 /public/sw.js

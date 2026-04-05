@@ -510,3 +510,51 @@ export function formatSilver(amount: number): string {
 export function getMaterialName(itemId: string): string {
   return MATERIAL_NAMES[itemId] ?? itemId
 }
+
+// ---------------------------------------------------------------------------
+// Bridge: Build a Recipe from game-data-store's ProcessedRecipe
+// ---------------------------------------------------------------------------
+import type { ProcessedItem, ProcessedRecipe } from '@/types/game-data'
+
+/**
+ * Convert a ProcessedRecipe + ProcessedItem from the game data store into
+ * the Recipe format used by the crafting calculator.
+ */
+export function recipeFromGameData(
+  processedRecipe: ProcessedRecipe,
+  processedItem: ProcessedItem,
+): Recipe {
+  // Map shop category to our RecipeCategory type
+  const categoryMap: Record<string, RecipeCategory> = {
+    weapons: 'weapons',
+    offhand: 'weapons',
+    armor: 'cloth_armor', // will be refined below
+    accessories: 'accessories',
+    consumables: 'consumables',
+    tools: 'accessories',
+    mounts: 'accessories',
+  }
+
+  let category: RecipeCategory = categoryMap[processedItem.category] ?? 'accessories'
+
+  // Refine armor category based on subcategory
+  if (processedItem.category === 'armor') {
+    const sub = processedItem.subcategory.toLowerCase()
+    if (sub.includes('plate')) category = 'plate_armor'
+    else if (sub.includes('leather')) category = 'leather_armor'
+    else if (sub.includes('cloth')) category = 'cloth_armor'
+  }
+
+  return {
+    itemId: processedItem.id,
+    name: processedItem.name,
+    tier: processedItem.tier,
+    materials: processedRecipe.materials.map((m) => ({
+      itemId: m.itemId,
+      quantity: m.count,
+    })),
+    craftingFocus: processedRecipe.craftingFocus,
+    craftingStation: '', // not available in game data dump
+    category,
+  }
+}

@@ -4,7 +4,12 @@ import { useMemo } from 'react'
 import { Calculator, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useCraftingStore } from '@/lib/stores/crafting-store'
-import { RECIPES, calculateProfit } from '@/features/crafting/utils/crafting-calc'
+import { useGameDataStore } from '@/lib/stores/game-data-store'
+import {
+  RECIPES,
+  calculateProfit,
+  recipeFromGameData,
+} from '@/features/crafting/utils/crafting-calc'
 import { useCraftingPrices } from '@/features/crafting/hooks/use-crafting-prices'
 import { RecipeSelector } from '@/features/crafting/components/recipe-selector'
 import { CraftingSettings } from '@/features/crafting/components/crafting-settings'
@@ -26,7 +31,24 @@ export default function CraftingCalculatorPage() {
     setIncludeJournals,
   } = useCraftingStore()
 
-  const selectedRecipe = selectedItem ? RECIPES[selectedItem] ?? null : null
+  const { getItem, getRecipe: getGameRecipe, loaded: gameDataLoaded } = useGameDataStore()
+
+  // Build recipe: try game data first, fall back to hardcoded
+  const selectedRecipe = useMemo(() => {
+    if (!selectedItem) return null
+
+    // Try game data store first
+    if (gameDataLoaded) {
+      const processedRecipe = getGameRecipe(selectedItem)
+      const processedItem = getItem(selectedItem)
+      if (processedRecipe && processedItem) {
+        return recipeFromGameData(processedRecipe, processedItem)
+      }
+    }
+
+    // Fall back to hardcoded recipes
+    return RECIPES[selectedItem] ?? null
+  }, [selectedItem, gameDataLoaded, getGameRecipe, getItem])
 
   const {
     materialPrices,

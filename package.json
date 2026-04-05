@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sync-game-data": "npx tsx scripts/sync-game-data.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
@@ -38,6 +39,7 @@
     "eslint-config-next": "16.2.2",
     "prettier": "^3.8.1",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
