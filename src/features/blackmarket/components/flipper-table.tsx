@@ -19,21 +19,41 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { formatSilver, formatTimeAgo } from '@/lib/utils/format'
 import type { FlipOpportunity } from '../utils/flipper-calc'
 import { getDataAgeHours } from '../utils/flipper-calc'
+import { useGameDataStore } from '@/lib/stores/game-data-store'
+import { useAppStore } from '@/lib/stores/app-store'
 
-// Copy item name button (for pasting into in-game market search)
-function CopyNameButton({ name }: { name: string }) {
+// Locale mapping: app language -> game client locale key
+const LOCALE_MAP: Record<string, string> = {
+  en: 'EN-US',
+  zh: 'ZH-CN',
+  de: 'DE-DE',
+  ru: 'RU-RU',
+  pt: 'PT-BR',
+  es: 'ES-ES',
+  fr: 'FR-FR',
+  ko: 'KO-KR',
+}
+
+// Copy item name in the user's language (for pasting into in-game market search)
+function CopyNameButton({ itemId, fallbackName }: { itemId: string; fallbackName: string }) {
   const [copied, setCopied] = React.useState(false)
+  const getItemName = useGameDataStore((s) => s.getItemName)
+  const language = useAppStore((s) => s.language)
+
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation()
-    navigator.clipboard.writeText(name)
+    const gameLocale = LOCALE_MAP[language] || 'EN-US'
+    const localizedName = getItemName(itemId, gameLocale)
+    navigator.clipboard.writeText(localizedName || fallbackName)
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }
+
   return (
     <button
       onClick={handleCopy}
       className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground transition-colors"
-      title="Copy name for in-game market search"
+      title="Copy localized name for in-game market search"
     >
       {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
     </button>
@@ -282,7 +302,7 @@ export function FlipperTable({
                         <span className="max-w-[180px] truncate font-medium">
                           {flip.itemName}
                         </span>
-                        <CopyNameButton name={flip.itemName} />
+                        <CopyNameButton itemId={flip.itemId} fallbackName={flip.itemName} />
                       </div>
                     </td>
 
