@@ -303,19 +303,25 @@ export function FlipperFilters({
                 onClick={resetFilters}
                 disabled={isScanning}
               >
-                <RotateCcw className="mr-1.5 size-3.5" />
-                Reset
+                <span className="flex items-center gap-1.5">
+                  <RotateCcw className="size-3.5" />
+                  Reset
+                </span>
               </Button>
 
               {isScanning ? (
                 <Button variant="destructive" size="sm" onClick={onCancel}>
-                  <X className="mr-1.5 size-3.5" />
-                  Cancel ({progress.current}/{progress.total})
+                  <span className="flex items-center gap-1.5">
+                    <X className="size-3.5" />
+                    Cancel ({progress.current}/{progress.total})
+                  </span>
                 </Button>
               ) : (
                 <Button size="sm" onClick={onScan}>
-                  <Search className="mr-1.5 size-3.5" />
-                  Scan Market
+                  <span className="flex items-center gap-1.5">
+                    <Search className="size-3.5" />
+                    Scan Market
+                  </span>
                 </Button>
               )}
             </div>
