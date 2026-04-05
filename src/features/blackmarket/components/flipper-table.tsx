@@ -6,6 +6,8 @@ import {
   ArrowUp,
   ArrowDown,
   AlertTriangle,
+  Copy,
+  Check,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -17,6 +19,26 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { formatSilver, formatTimeAgo } from '@/lib/utils/format'
 import type { FlipOpportunity } from '../utils/flipper-calc'
 import { getDataAgeHours } from '../utils/flipper-calc'
+
+// Copy item name button (for pasting into in-game market search)
+function CopyNameButton({ name }: { name: string }) {
+  const [copied, setCopied] = React.useState(false)
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    navigator.clipboard.writeText(name)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+  return (
+    <button
+      onClick={handleCopy}
+      className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+      title="Copy name for in-game market search"
+    >
+      {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
+    </button>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Sortable column keys
@@ -257,9 +279,10 @@ export function FlipperTable({
                           quality={flip.buyQuality}
                           enchantment={flip.enchantment}
                         />
-                        <span className="max-w-[200px] truncate font-medium">
+                        <span className="max-w-[180px] truncate font-medium">
                           {flip.itemName}
                         </span>
+                        <CopyNameButton name={flip.itemName} />
                       </div>
                     </td>
 

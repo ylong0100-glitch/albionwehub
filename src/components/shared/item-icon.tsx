@@ -32,7 +32,9 @@ export function ItemIcon({
     'loading'
   )
 
-  const src = `https://render.albiononline.com/v1/item/${itemId}${enchantment ? `@${enchantment}` : ''}.png?quality=${quality}&size=${size}`
+  // Use smaller icon size for network efficiency (max 128px, render API supports 1-217)
+  const renderSize = Math.min(size * 2, 128) // 2x for retina but capped at 128
+  const src = `https://render.albiononline.com/v1/item/${itemId}${enchantment ? `@${enchantment}` : ''}.png?quality=${quality}&size=${renderSize}`
 
   const borderColor = qualityBorderColors[quality] ?? qualityBorderColors[1]
 

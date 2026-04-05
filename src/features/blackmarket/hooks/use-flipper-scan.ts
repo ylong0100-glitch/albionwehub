@@ -237,32 +237,36 @@ export function useFlipperScan(): FlipperScanResult {
         const buyEntries = itemEntries.filter((e) => e.city !== 'Black Market')
         const bmEntries = itemEntries.filter((e) => e.city === 'Black Market')
 
-        // For each BM buy order (per quality), find matching buy opportunity
+        // For each BM buy order (per quality), find the best matching buy opportunity
+        // Then keep only the SINGLE BEST flip per item to avoid duplicates
+        // (BM only needs one item, a single market sell order can only fill one BM order)
+        let bestFlip: FlipOpportunity | null = null
+
         for (const bmEntry of bmEntries) {
           if (bmEntry.buy_price_max <= 0) continue
           if (isStaleDate(bmEntry.buy_price_max_date)) continue
 
-          const bmQuality = bmEntry.quality // BM wants this quality
+          const bmQuality = bmEntry.quality
 
-          // Find cheapest sell order in buy city with quality >= BM required quality
-          // (higher quality can fill lower quality BM orders)
-          const validBuyEntries = buyEntries.filter(
-            (e) => e.quality >= bmQuality && e.sell_price_min > 0 && !isStaleDate(e.sell_price_min_date)
+          // Find cheapest sell order in buy city with EXACT quality match
+          // (avoid showing same market item filling multiple BM quality tiers)
+          const exactMatch = buyEntries.find(
+            (e) => e.quality === bmQuality && e.sell_price_min > 0 && !isStaleDate(e.sell_price_min_date)
           )
 
-          if (validBuyEntries.length === 0) continue
+          // If no exact match, try higher quality items that can fill this order
+          const buyEntry = exactMatch ?? buyEntries
+            .filter((e) => e.quality >= bmQuality && e.sell_price_min > 0 && !isStaleDate(e.sell_price_min_date))
+            .sort((a, b) => a.sell_price_min - b.sell_price_min)[0]
 
-          // Pick the cheapest
-          const cheapest = validBuyEntries.reduce((a, b) =>
-            a.sell_price_min < b.sell_price_min ? a : b
-          )
+          if (!buyEntry) continue
 
-          const cityPrice = cheapest.sell_price_min
+          const cityPrice = buyEntry.sell_price_min
           const bmPrice = bmEntry.buy_price_max
 
-          // Filter by data age if configured
+          // Filter by data age
           if (maxDataAgeHours > 0) {
-            const buyAge = getDataAgeHours(cheapest.sell_price_min_date)
+            const buyAge = getDataAgeHours(buyEntry.sell_price_min_date)
             const sellAge = getDataAgeHours(bmEntry.buy_price_max_date)
             if (buyAge > maxDataAgeHours || sellAge > maxDataAgeHours) continue
           }
@@ -272,25 +276,31 @@ export function useFlipperScan(): FlipperScanResult {
 
           if (netProfit <= 0) continue
 
-          const item = getItem(itemId)
+          // Keep only the best flip for this item (highest profit)
+          if (!bestFlip || netProfit > bestFlip.netProfit) {
+            const item = getItem(itemId)
+            bestFlip = {
+              itemId,
+              itemName: item?.name ?? itemId,
+              tier: item?.tier ?? 0,
+              enchantment: item?.enchantment ?? 0,
+              category: item?.category ?? '',
+              buyCity: buyEntry.city,
+              buyPrice: cityPrice,
+              buyPriceDate: buyEntry.sell_price_min_date,
+              buyQuality: buyEntry.quality,
+              sellPrice: bmPrice,
+              sellPriceDate: bmEntry.buy_price_max_date,
+              sellQuality: bmQuality,
+              salesTax,
+              netProfit,
+              profitMargin,
+            }
+          }
+        }
 
-          flips.push({
-            itemId,
-            itemName: item?.name ?? itemId,
-            tier: item?.tier ?? 0,
-            enchantment: item?.enchantment ?? 0,
-            category: item?.category ?? '',
-            buyCity: cheapest.city,
-            buyPrice: cityPrice,
-            buyPriceDate: cheapest.sell_price_min_date,
-            buyQuality: cheapest.quality,
-            sellPrice: bmPrice,
-            sellPriceDate: bmEntry.buy_price_max_date,
-            sellQuality: bmQuality,
-            salesTax,
-            netProfit,
-            profitMargin,
-          })
+        if (bestFlip) {
+          flips.push(bestFlip)
         }
       }
 
