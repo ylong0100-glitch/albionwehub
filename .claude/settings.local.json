@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:albiononline2d.com)",
+      "WebFetch(domain:www.tools4albion.com)",
+      "WebFetch(domain:albionfreemarket.com)",
+      "WebFetch(domain:forum.albiononline.com)",
+      "WebFetch(domain:stackshare.io)",
+      "WebFetch(domain:albiononlinetools.com)",
+      "WebFetch(domain:albiononlinegrind.com)",
+      "WebFetch(domain:top.gg)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:www.albion-online-data.com)",
+      "WebFetch(domain:w3techs.com)",
+      "WebFetch(domain:website.informer.com)",
+      "WebFetch(domain:west.albion-online-data.com)",
+      "WebFetch(domain:albionix.app)",
+      "WebFetch(domain:mantis.adam4eve.eu)",
+      "WebFetch(domain:murderledger.albiononline2d.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:aofarm.skyline969.ca)",
+      "WebFetch(domain:www.patreon.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:ololgame.com)",
+      "WebFetch(domain:wiki.albiononline.com)",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:openalbion.com)",
+      "WebFetch(domain:psykzz.github.io)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest init -d --style default --base-color neutral)",
+      "Bash(npx shadcn@latest init -d)"
+    ]
+  }
+}
