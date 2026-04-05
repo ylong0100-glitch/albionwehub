@@ -2,12 +2,19 @@
 
 import * as React from 'react'
 import { usePathname } from 'next/navigation'
-import { Menu, ChevronRight, Sun, Moon, Monitor } from 'lucide-react'
+import { Menu, ChevronRight, Sun, Moon, Monitor, Languages } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import { useAppStore, type Theme } from '@/lib/stores/app-store'
+import { useAppStore, type Theme, type Language } from '@/lib/stores/app-store'
 import { Button } from '@/components/ui/button'
 import { RegionSelector } from '@/components/shared/region-selector'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 function useBreadcrumbs() {
   const pathname = usePathname()
@@ -81,6 +88,40 @@ function ThemeToggle() {
   )
 }
 
+const LANGUAGE_OPTIONS: { value: Language; label: string; flag: string }[] = [
+  { value: 'en', label: 'EN', flag: '🇺🇸' },
+  { value: 'zh', label: '中文', flag: '🇨🇳' },
+  { value: 'de', label: 'DE', flag: '🇩🇪' },
+  { value: 'ru', label: 'RU', flag: '🇷🇺' },
+  { value: 'pt', label: 'PT', flag: '🇧🇷' },
+  { value: 'es', label: 'ES', flag: '🇪🇸' },
+  { value: 'fr', label: 'FR', flag: '🇫🇷' },
+  { value: 'ko', label: '한국어', flag: '🇰🇷' },
+]
+
+function LanguageSelector() {
+  const language = useAppStore((s) => s.language)
+  const setLanguage = useAppStore((s) => s.setLanguage)
+  const current = LANGUAGE_OPTIONS.find((l) => l.value === language) || LANGUAGE_OPTIONS[0]
+
+  return (
+    <Select value={language} onValueChange={(v) => { if (v) setLanguage(v as Language) }}>
+      <SelectTrigger className="h-8 w-auto gap-1 border-none bg-transparent px-2 text-xs">
+        <SelectValue>
+          <span>{current.flag}{current.label}</span>
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {LANGUAGE_OPTIONS.map((lang) => (
+          <SelectItem key={lang.value} value={lang.value}>
+            {lang.flag} {lang.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
 export function Topbar() {
   const setMobileNavOpen = useAppStore((s) => s.setMobileNavOpen)
   const breadcrumbs = useBreadcrumbs()
@@ -126,6 +167,7 @@ export function Topbar() {
       {/* Right side actions */}
       <div className="flex items-center gap-1">
         <RegionSelector />
+        <LanguageSelector />
         <ThemeToggle />
       </div>
     </header>
