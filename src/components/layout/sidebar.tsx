@@ -16,6 +16,13 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 
+function useLocalePrefix() {
+  const pathname = usePathname()
+  // Extract locale from pathname like /en/market/prices -> /en
+  const match = pathname.match(/^\/([a-z]{2})(\/|$)/)
+  return match ? `/${match[1]}` : '/en'
+}
+
 function NavGroupSection({
   group,
   collapsed,
@@ -24,7 +31,8 @@ function NavGroupSection({
   collapsed: boolean
 }) {
   const pathname = usePathname()
-  const isGroupActive = group.items.some((item) => pathname.startsWith(item.href))
+  const localePrefix = useLocalePrefix()
+  const isGroupActive = group.items.some((item) => pathname.includes(item.href))
   const [expanded, setExpanded] = React.useState(isGroupActive)
 
   // Auto-expand when a route in this group becomes active
@@ -39,23 +47,22 @@ function NavGroupSection({
       <div className="flex flex-col items-center gap-0.5">
         {group.items.map((item) => {
           const ItemIcon = item.icon
-          const isActive = pathname.startsWith(item.href)
+          const fullHref = `${localePrefix}${item.href}`
+          const isActive = pathname.includes(item.href)
           return (
             <Tooltip key={item.href}>
-              <TooltipTrigger
-                render={
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      'flex size-8 items-center justify-center rounded-md transition-colors',
-                      isActive
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    )}
-                  />
-                }
-              >
-                <ItemIcon className="size-4" />
+              <TooltipTrigger asChild>
+                <Link
+                  href={fullHref}
+                  className={cn(
+                    'flex size-8 items-center justify-center rounded-md transition-colors',
+                    isActive
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )}
+                >
+                  <ItemIcon className="size-4" />
+                </Link>
               </TooltipTrigger>
               <TooltipContent side="right">{item.label}</TooltipContent>
             </Tooltip>
@@ -88,11 +95,12 @@ function NavGroupSection({
         <div className="ml-2 space-y-0.5 border-l border-border pl-2">
           {group.items.map((item) => {
             const ItemIcon = item.icon
-            const isActive = pathname.startsWith(item.href)
+            const fullHref = `${localePrefix}${item.href}`
+            const isActive = pathname.includes(item.href)
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={fullHref}
                 className={cn(
                   'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
                   isActive

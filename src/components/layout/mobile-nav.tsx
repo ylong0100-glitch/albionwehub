@@ -16,10 +16,17 @@ import {
 } from '@/components/ui/sheet'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
+function useLocalePrefix() {
+  const pathname = usePathname()
+  const match = pathname.match(/^\/([a-z]{2})(\/|$)/)
+  return match ? `/${match[1]}` : '/en'
+}
+
 function MobileNavGroup({ group }: { group: NavGroup }) {
   const pathname = usePathname()
+  const localePrefix = useLocalePrefix()
   const setMobileNavOpen = useAppStore((s) => s.setMobileNavOpen)
-  const isGroupActive = group.items.some((item) => pathname.startsWith(item.href))
+  const isGroupActive = group.items.some((item) => pathname.includes(item.href))
   const [expanded, setExpanded] = React.useState(isGroupActive)
 
   React.useEffect(() => {
@@ -51,11 +58,12 @@ function MobileNavGroup({ group }: { group: NavGroup }) {
         <div className="ml-3 space-y-0.5 border-l border-border pl-3">
           {group.items.map((item) => {
             const ItemIcon = item.icon
-            const isActive = pathname.startsWith(item.href)
+            const fullHref = `${localePrefix}${item.href}`
+            const isActive = pathname.includes(item.href)
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={fullHref}
                 onClick={() => setMobileNavOpen(false)}
                 className={cn(
                   'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors',
